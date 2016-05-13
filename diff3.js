@@ -58,11 +58,17 @@ function longestCommonSubsequence(file1, file2) {
       }
   }
 
-  prev.chain = {
+  var tail = {
     file1index: -1,
     file2index: -1,
     chain: null
   };
+
+  if (!prev) {
+    return tail;
+  }
+
+  prev.chain = tail;
 
   return root;
 }
