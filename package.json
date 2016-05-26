@@ -1,6 +1,6 @@
 {
   "name": "diff3",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "A diff3 engine for nodejs",
   "main": "diff3.js",
   "scripts": {
