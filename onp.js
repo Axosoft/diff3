@@ -54,6 +54,7 @@ module.exports = function (a_, b_) {
             m       = n;
             n       = tmp2;
             reverse = true;
+            offset = m + 1;
         }
     };
 
