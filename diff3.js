@@ -205,6 +205,14 @@ function diff3MergeIndices(a, o, b) {
   return result;
 }
 
+function areSectionsEqual(aStartingIndex, aFile, oStartingIndex, oFile, length) {
+  for (var i = 0; i < length; ++i) {
+    var aIndex = aStartingIndex + i, oIndex = oStartingIndex + i;
+    if (aFile.length <= aIndex || oFile.length <= oIndex || aFile[aIndex] !== oFile[oIndex]) return false;
+  }
+  return true;
+}
+
 function diff3Merge(a, o, b) {
   // Applies the output of Diff.diff3_merge_indices to actually
   // construct the merged file; the returned result alternates
@@ -241,10 +249,20 @@ function diff3Merge(a, o, b) {
     return false;
   }
 
+  var lineMappings = [];
+  var lineIndices = {
+    a: 0,
+    o: 0,
+    b: 0
+  };
   for (var i = 0; i < indices.length; i++) {
     var x = indices[i];
     var side = x[0];
+    var prevLineIndices = { ...lineIndices };
     if (side == -1) {
+      lineIndices.a += x[2];
+      lineIndices.o += x[4];
+      lineIndices.b += x[6];
       if (!isTrueConflict(x)) {
         pushOk(files[0].slice(x[1], x[1] + x[2]));
       } else {
@@ -261,12 +279,59 @@ function diff3Merge(a, o, b) {
         });
       }
     } else {
+      switch (side) {
+        case 0: {
+          lineIndices.a += x[2];
+          break;
+        }
+        case 1: {
+          if (i === 0 || i + 1 >= indices.length) {
+            lineIndices.a += x[2];
+            lineIndices.o += x[2];
+            lineIndices.b += x[2];
+            break;
+          }
+
+          var nextIndices = indices[i + 1];
+          if (nextIndices[0] !== 1) {
+            lineIndices.a += x[2];
+            lineIndices.o += x[2];
+            lineIndices.b += x[2];
+            break;
+          }
+
+          if (a[lineIndices.a] === o[lineIndices.o]) {
+            lineIndices.a += x[2];
+            lineIndices.o += x[2];
+          } else {
+            lineIndices.o += x[2];
+            lineIndices.b += x[2];
+          }
+
+          break;
+        }
+        case 2: {
+          lineIndices.b += x[2];
+          break;
+        }
+      }
+
       pushOk(files[side].slice(x[1], x[1] + x[2]));
     }
+
+    var makeOffsetObject = (mergeSide) => ({
+      start: prevLineIndices[mergeSide],
+      length: lineIndices[mergeSide] - prevLineIndices[mergeSide]
+    });
+    lineMappings.push({
+      a: makeOffsetObject('a'),
+      o: makeOffsetObject('o'),
+      b: makeOffsetObject('b')
+    });
   }
 
   flushOk();
-  return result;
+  return { result, lineMappings };
 }
 
 module.exports = diff3Merge;
