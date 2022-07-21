@@ -24,83 +24,6 @@
 
 var onp = require('./onp');
 
-function longestCommonSubsequence(file1, file2) {
-  var diff = new onp(file1, file2);
-  diff.compose();
-  var ses = diff.getses();
-
-  var root;
-  var prev;
-  var file1RevIdx = file1.length - 1,
-      file2RevIdx = file2.length - 1;
-  for (var i = ses.length - 1; i >= 0; --i) {
-      if (ses[i].t === diff.SES_COMMON) {
-        if (prev) {
-          prev.chain = {
-            file1index: file1RevIdx,
-            file2index: file2RevIdx,
-            chain: null
-          };
-          prev = prev.chain;
-        } else {
-          root = {
-            file1index: file1RevIdx,
-            file2index: file2RevIdx,
-            chain: null
-          };
-          prev = root;
-        }
-        file1RevIdx--;
-        file2RevIdx--;
-      } else if (ses[i].t === diff.SES_DELETE) {
-        file1RevIdx--;
-      } else if (ses[i].t === diff.SES_ADD) {
-        file2RevIdx--;
-      }
-  }
-
-  var tail = {
-    file1index: -1,
-    file2index: -1,
-    chain: null
-  };
-
-  if (!prev) {
-    return tail;
-  }
-
-  prev.chain = tail;
-
-  return root;
-}
-
-function diffIndices(file1, file2) {
-  // We apply the LCS to give a simple representation of the
-  // offsets and lengths of mismatched chunks in the input
-  // files. This is used by diff3_merge_indices below.
-
-  var result = [];
-  var tail1 = file1.length;
-  var tail2 = file2.length;
-
-  for (var candidate = longestCommonSubsequence(file1, file2); candidate !== null; candidate = candidate.chain) {
-    var mismatchLength1 = tail1 - candidate.file1index - 1;
-    var mismatchLength2 = tail2 - candidate.file2index - 1;
-    tail1 = candidate.file1index;
-    tail2 = candidate.file2index;
-
-    if (mismatchLength1 || mismatchLength2) {
-      result.push({
-        file1: [tail1 + 1, mismatchLength1],
-        file2: [tail2 + 1, mismatchLength2]
-      });
-    }
-  }
-
-  result.reverse();
-  return result;
-}
-
 function diff3MergeIndices(a, o, b) {
   // Given three files, A, O, and B, where both A and B are
   // independently derived from O, returns a fairly complicated
@@ -115,8 +38,8 @@ function diff3MergeIndices(a, o, b) {
   // (http://www.cis.upenn.edu/~bcpierce/papers/diff3-short.pdf)
   var i;
 
-  var m1 = diffIndices(o, a);
-  var m2 = diffIndices(o, b);
+  var m1 = new onp(o, a).compose();
+  var m2 = new onp(o, b).compose();
 
   var hunks = [];
 

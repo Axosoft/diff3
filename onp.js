@@ -33,15 +33,9 @@ module.exports = function (a_, b_) {
         m          = a.length,
         n          = b.length,
         reverse    = false,
-        ed         = null,
         offset     = m + 1,
         path       = [],
-        pathposi   = [],
-        ses        = [],
-        lcs        = "",
-        SES_DELETE = -1,
-        SES_COMMON = 0,
-        SES_ADD    = 1;
+        pathposi   = [];
 
     var tmp1,
         tmp2;
@@ -59,92 +53,45 @@ module.exports = function (a_, b_) {
         }
     };
 
-    var P = function (x, y, k) {
+    var P = function (startX, startY, endX, endY, r) {
         return {
-            'x' : x,
-            'y' : y,
-            'k' : k,
-        };
-    };
-
-    var seselem = function (elem, t) {
-        return {
-            'elem' : elem,
-            't'    : t,
+            startX,
+            startY,
+            endX,
+            endY,
+            r
         };
     };
 
     var snake = function (k, p, pp) {
-        var r, x, y;
+        var r, x, y, startX, startY;
         if (p > pp) {
             r = path[k-1+offset];
         } else {
             r = path[k+1+offset];
         }
 
-        y = Math.max(p, pp);
-        x = y - k;
+        startY = y = Math.max(p, pp);
+        startX = x = y - k;
         while (x < m && y < n && a[x] === b[y]) {
             ++x;
             ++y;
         }
 
-        path[k+offset] = pathposi.length;
-        pathposi[pathposi.length] = new P(x, y, r);
-        return y;
-    };
-
-    var recordseq = function (epc) {
-        var x_idx, y_idx, px_idx, py_idx, i;
-        x_idx  = y_idx  = 1;
-        px_idx = py_idx = 0;
-        for (i=epc.length-1;i>=0;--i) {
-            while(px_idx < epc[i].x || py_idx < epc[i].y) {
-                if (epc[i].y - epc[i].x > py_idx - px_idx) {
-                    if (reverse) {
-                        ses[ses.length] = new seselem(b[py_idx], SES_DELETE);
-                    } else {
-                        ses[ses.length] = new seselem(b[py_idx], SES_ADD);
-                    }
-                    ++y_idx;
-                    ++py_idx;
-                } else if (epc[i].y - epc[i].x < py_idx - px_idx) {
-                    if (reverse) {
-                        ses[ses.length] = new seselem(a[px_idx], SES_ADD);
-                    } else {
-                        ses[ses.length] = new seselem(a[px_idx], SES_DELETE);
-                    }
-                    ++x_idx;
-                    ++px_idx;
-                } else {
-                    ses[ses.length] = new seselem(a[px_idx], SES_COMMON);
-                    lcs += a[px_idx];
-                    ++x_idx;
-                    ++y_idx;
-                    ++px_idx;
-                    ++py_idx;
-                }
-            }
+        if (startX == x && startY == y) {
+            path[k+offset] = r;
+        } else {
+            path[k+offset] = pathposi.length;
+            pathposi[pathposi.length] = new P(startX, startY, x, y, r);
         }
+        return y;
     };
 
     init();
 
     return {
-        SES_DELETE : -1,
-        SES_COMMON :  0,
-        SES_ADD    :  1,
-        editdistance : function () {
-            return ed;
-        },
-        getlcs : function () {
-            return lcs;
-        },
-        getses : function () {
-            return ses;
-        },
         compose : function () {
-            var delta, size, fp, p, r, epc, i, k;
+            var delta, size, fp, p, r, i, k, lastStartX, lastStartY, result;
             delta  = n - m;
             size   = m + n + 3;
             fp     = {};
@@ -167,13 +114,39 @@ module.exports = function (a_, b_) {
             ed = delta + 2 * p;
 
             r = path[delta+offset];
-
-            epc  = [];
+            lastStartX = m;
+            lastStartY = n;
+            result = [];
             while (r !== -1) {
-                epc[epc.length] = new P(pathposi[r].x, pathposi[r].y, null);
-                r = pathposi[r].k;
+                let elem = pathposi[r];
+                if (m != elem.endX || n != elem.endY) {
+                    result.push({
+                        file1: [
+                            reverse ? elem.endY : elem.endX,
+                            reverse ? lastStartY - elem.endY : lastStartX - elem.endX
+                        ],
+                        file2: [
+                            reverse ? elem.endX : elem.endY,
+                            reverse ? lastStartX - elem.endX : lastStartY - elem.endY
+                        ]
+                    });
+                }
+
+                lastStartX = elem.startX;
+                lastStartY = elem.startY;
+                
+                r = pathposi[r].r;
             }
-            recordseq(epc);
+
+            if (lastStartX != 0 || lastStartY != 0) {
+                result.push({
+                    file1: [0, reverse ? lastStartY : lastStartX],
+                    file2: [0, reverse ? lastStartX : lastStartY]
+                })
+            }
+
+            result.reverse();
+            return result;
         }
     };
 };
