@@ -111,8 +111,6 @@ module.exports = function (a_, b_) {
                 fp[delta+offset] = snake(delta, fp[delta-1+offset]+1, fp[delta+1+offset]);
             } while (fp[delta+offset] !== n);
 
-            ed = delta + 2 * p;
-
             r = path[delta+offset];
             lastStartX = m;
             lastStartY = n;
